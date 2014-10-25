@@ -1,4 +1,8 @@
-// Halloween Eyes
+// Evil Eyes
+// Art Dahm, <art@dahm.com>
+// http://dragongears.com
+//
+// Based on Halloween Eyes
 // Brian Enigma, <brian@netninja.com>
 // http://nja.me/eyes
 //
@@ -23,6 +27,9 @@
 #define RIGHT_EYE 0
 #define LEFT_EYE  1
 #define PUPIL_Y 4
+#define PUPIL_WIDTH 2
+#define PUPIL_HEIGHT 2
+#define RIGHT_PUPIL_X_ADJUST -2
 
 // Initialize LED Controllers
 
@@ -121,8 +128,10 @@ blinkImg[][8] = {    // Eye animation frames
         B00000000 }
 };
 
-#define EVIL_EYE_OFFSET (8 * 5)
+// Offset to the right eye in the eye array
+#define RIGHT_EYE_OFFSET (8 * 5)
 
+// Initialize blink and gaze variables
 uint8_t
 	blinkIndex[] = { 1, 2, 3, 4, 3, 2, 1 }, // Blink bitmap sequence
     blinkCountdown = 100, // Countdown to next blink (in frames)
@@ -133,7 +142,7 @@ int8_t
     newX = 3,   // Next eye position
     dX   = 0;   // Distance from prior to new position
 
-
+// Draw a pixel
 void drawPixel(uint8_t *displaybuffer, int16_t x, int16_t y, uint8_t color) {
 	if ((y < 0) || (y >= 8)) return;
 	if ((x < 0) || (x >= 8)) return;
@@ -147,43 +156,48 @@ void drawPixel(uint8_t *displaybuffer, int16_t x, int16_t y, uint8_t color) {
 	}
 }
 
+// Draw a vertical line
 void drawVLine(uint8_t *displaybuffer, int16_t y, int16_t x, int16_t w, uint8_t color) {
 	for (int16_t i=x; i<x+w; i++) {
 		drawPixel(displaybuffer, i, y, color);
 	}
 }
 
+// Fill a rectangle with a color
 void fillRect(uint8_t *displaybuffer, int16_t x, int16_t y, int16_t w, int16_t h, uint8_t color) {
 	for (int16_t i=y; i<y+h; i++) {
 		drawVLine(displaybuffer, i, x, w, color);
 	}
 }
 
+// Clear display buffer
 void clear(uint8_t *displaybuffer) {
 	for (uint8_t i=0; i<8; i++) {
 		displaybuffer[i] = 0;
 	}
 }
 
+// Copy bitmap from array to display buffer
 void drawBitmap(uint8_t *displaybuffer, const uint8_t *source) {
 	for (uint8_t i=0; i<8; i++) {
 		displaybuffer[i] = pgm_read_byte(&source[i]);
 	}
 }
 
+// Write display buffer to LED matrix
 void writeDisplay(uint8_t *displaybuffer, uint8_t out) {
 	for (uint8_t i=0; i<8; i++) {
 		lc.setRow(out, i, displaybuffer[i]);
 	}
 }
 
-
-
+// Main setup
 void setup() {
 
 	// Seed random number generator from an unused analog input:
 	randomSeed(analogRead(A0));
 
+	// Initialize LED displays
 	for(int address=0;address<devCount;address++) {
 		/*The MAX72XX is in power-saving mode on startup*/
 		lc.shutdown(address,false);
@@ -194,13 +208,12 @@ void setup() {
 	}
 }
 
+// Main loop
 void loop()
 {
     uint8_t motion;
     const uint8_t *imageOffset;
-    // Draw eyeball in current state of blinkyness (no pupil).  Note that
-    // only one eye needs to be drawn.  Because the two eye matrices share
-    // the same address, the same data will be received by both.
+    // Draw eyeball in current state of blinkyness (no pupil).
     clear(&eyeMatrix[LEFT_EYE][0]);
     clear(&eyeMatrix[RIGHT_EYE][0]);
 
@@ -214,13 +227,14 @@ void loop()
             0                                       // No, show bitmap 0
             ][0];
     drawBitmap(&eyeMatrix[LEFT_EYE][0], imageOffset);
-    imageOffset += EVIL_EYE_OFFSET;
+    imageOffset += RIGHT_EYE_OFFSET;
     drawBitmap(&eyeMatrix[RIGHT_EYE][0], imageOffset);
 
     // Decrement blink counter.  At end, set random time for next blink.
     blinkCountdown--;
-    if (blinkCountdown == 0)
+    if (blinkCountdown == 0) {
         blinkCountdown = random(5, 180);
+    }
 
     // Add a pupil (2x2 black square) atop the blinky eyeball bitmap.
     // Periodically, the pupil moves to a new position...
@@ -230,12 +244,16 @@ void loop()
                 &eyeMatrix[LEFT_EYE][0], 
                 newX - (dX * gazeCountdown / gazeFrames),
                 PUPIL_Y,
-                2, 2, LED_OFF);
+                PUPIL_WIDTH,
+                PUPIL_HEIGHT,
+                LED_OFF);
         fillRect(
                 &eyeMatrix[RIGHT_EYE][0], 
-                newX - (dX * gazeCountdown / gazeFrames) - 2,
+                newX - (dX * gazeCountdown / gazeFrames) + RIGHT_PUPIL_X_ADJUST,
                 PUPIL_Y,
-                2, 2, LED_OFF);
+                PUPIL_WIDTH,
+                PUPIL_HEIGHT,
+                LED_OFF);
         if(gazeCountdown == 0) {    // Last frame?
             eyeX = newX; // Yes.  What's new is old, then...
             newX = random(3) + 3;
@@ -245,8 +263,20 @@ void loop()
         }
     } else {
         // Not in motion yet -- draw pupil at current static position
-        fillRect(&eyeMatrix[LEFT_EYE][0], eyeX, PUPIL_Y, 2, 2, LED_OFF);
-        fillRect(&eyeMatrix[RIGHT_EYE][0], eyeX - 2, PUPIL_Y, 2, 2, LED_OFF);
+        fillRect(
+                &eyeMatrix[LEFT_EYE][0],
+                eyeX,
+                PUPIL_Y,
+                PUPIL_WIDTH,
+                PUPIL_HEIGHT,
+                LED_OFF);
+        fillRect(
+                &eyeMatrix[RIGHT_EYE][0],
+                eyeX + RIGHT_PUPIL_X_ADJUST,
+                PUPIL_Y,
+                PUPIL_WIDTH,
+                PUPIL_HEIGHT,
+                LED_OFF);
     }
 
     // Refresh all of the matrices in one quick pass
