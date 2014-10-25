@@ -22,6 +22,7 @@
 
 #define RIGHT_EYE 0
 #define LEFT_EYE  1
+#define PUPIL_Y 4
 
 // Initialize LED Controllers
 
@@ -132,8 +133,6 @@ int8_t
     newX = 3,   // Next eye position
     dX   = 0;   // Distance from prior to new position
 
-#define EYE_Y 4
-
 
 void drawPixel(uint8_t *displaybuffer, int16_t x, int16_t y, uint8_t color) {
 	if ((y < 0) || (y >= 8)) return;
@@ -195,9 +194,7 @@ void setup() {
 	}
 }
 
-int blinkColorSwitchCounter = 0;
-
-void loop() 
+void loop()
 {
     uint8_t motion;
     const uint8_t *imageOffset;
@@ -222,18 +219,8 @@ void loop()
 
     // Decrement blink counter.  At end, set random time for next blink.
     blinkCountdown--;
-    if (2 == blinkCountdown)
-        blinkColorSwitchCounter++;
-    if (blinkCountdown == 0) 
+    if (blinkCountdown == 0)
         blinkCountdown = random(5, 180);
-
-    // Switch eye color mid-blink
-    if (blinkColorSwitchCounter >= 5)
-    {
-        eyeX = 4;
-        newX = 4;
-        dX = 0;
-    }
 
     // Add a pupil (2x2 black square) atop the blinky eyeball bitmap.
     // Periodically, the pupil moves to a new position...
@@ -242,12 +229,12 @@ void loop()
         fillRect(
                 &eyeMatrix[LEFT_EYE][0], 
                 newX - (dX * gazeCountdown / gazeFrames),
-                EYE_Y,
+                PUPIL_Y,
                 2, 2, LED_OFF);
         fillRect(
                 &eyeMatrix[RIGHT_EYE][0], 
                 newX - (dX * gazeCountdown / gazeFrames) - 2,
-                EYE_Y,
+                PUPIL_Y,
                 2, 2, LED_OFF);
         if(gazeCountdown == 0) {    // Last frame?
             eyeX = newX; // Yes.  What's new is old, then...
@@ -258,8 +245,8 @@ void loop()
         }
     } else {
         // Not in motion yet -- draw pupil at current static position
-        fillRect(&eyeMatrix[LEFT_EYE][0], eyeX, EYE_Y, 2, 2, LED_OFF);
-        fillRect(&eyeMatrix[RIGHT_EYE][0], eyeX - 2, EYE_Y, 2, 2, LED_OFF);
+        fillRect(&eyeMatrix[LEFT_EYE][0], eyeX, PUPIL_Y, 2, 2, LED_OFF);
+        fillRect(&eyeMatrix[RIGHT_EYE][0], eyeX - 2, PUPIL_Y, 2, 2, LED_OFF);
     }
 
     // Refresh all of the matrices in one quick pass
